@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multiplayer Snake Game</title>
+  <style>
+    canvas {
+      border: 1px solid black;
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="400" height="400"></canvas>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const socket = io();
+
+    const CELL_SIZE = 20;
+    const players = {};
+
+    // Draw the game
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let id in players) {
+        const snake = players[id].snake;
+        snake.forEach(segment => {
+          ctx.fillStyle = id === socket.id ? 'green' : 'red';
+          ctx.fillRect(segment.x * CELL_SIZE, segment.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+        });
+      }
+    }
+
+    // Handle player updates
+    socket.on('currentPlayers', (data) => {
+      Object.assign(players, data);
+      draw();
+    });
+
+    socket.on('newPlayer', (data) => {
+      players[data.id] = data.data;
+      draw();
+    });
+
+    socket.on('removePlayer', (id) => {
+      delete players[id];
+      draw();
+    });
+
+    socket.on('update', (data) => {
+      Object.assign(players, data);
+      draw();
+    });
+
+    // Handle input
+    window.addEventListener('keydown', (event) => {
+      const directions = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+      if (directions[event.key]) {
+        socket.emit('move', { direction: directions[event.key] });
+      }
+    });
+  </script>
+</body>
+</html>
